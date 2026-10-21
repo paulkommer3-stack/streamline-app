@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- html2pdf.js for Executive Management PDF Report Generation -->
+  <!-- html2pdf.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   
   <style>
@@ -27,6 +27,65 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
 
+  <!-- 0. LOGIN SCREEN OVERLAY -->
+  <div id="login-overlay" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8 space-y-6">
+      
+      <!-- Logo Header -->
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-lg shadow-indigo-500/30">
+          <i class="fa-solid fa-diagram-project"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-white tracking-tight">Sign in to Streamline</h2>
+        <p class="text-xs text-slate-400">Project Pipeline & Specification Management</p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="form-login" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <div id="login-error" class="hidden text-xs text-rose-400 bg-rose-950/50 border border-rose-800 p-3 rounded-lg text-center">
+          Invalid email or password. Please try again.
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Email Address</label>
+          <div class="relative">
+            <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-500 text-sm"></i>
+            <input type="email" id="login-email" required placeholder="name@company.com" value="paul@streamline.com" class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-800/90 border border-slate-700 text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Password</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-500 text-sm"></i>
+            <input type="password" id="login-password" required placeholder="••••••••" value="password123" class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-800/90 border border-slate-700 text-white rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+          <span>Sign In</span>
+          <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </form>
+
+      <!-- Quick Demo Account Preset Buttons -->
+      <div class="pt-4 border-t border-slate-800/80">
+        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 text-center">Quick Demo Login</p>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button type="button" onclick="fillQuickLogin('paul@streamline.com', 'password123')" class="p-2 bg-slate-800/60 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-left transition">
+            <p class="font-bold text-white">Paul Kommer</p>
+            <p class="text-[10px] text-slate-400">Lead Consultant</p>
+          </button>
+          <button type="button" onclick="fillQuickLogin('admin@streamline.com', 'streamline2026')" class="p-2 bg-slate-800/60 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-left transition">
+            <p class="font-bold text-white">Admin User</p>
+            <p class="text-[10px] text-slate-400">System Admin</p>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- TOP NAVIGATION HEADER -->
   <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
     <div class="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -38,7 +97,7 @@
         <div>
           <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
             Streamline
-            <span class="text-xs bg-indigo-500/30 text-indigo-300 font-medium px-2 py-0.5 rounded border border-indigo-400/20">Local Storage</span>
+            <span class="text-xs bg-indigo-500/30 text-indigo-300 font-medium px-2 py-0.5 rounded border border-indigo-400/20">Pipeline</span>
           </h1>
           <p class="text-xs text-slate-400">Project Pipeline Manager</p>
         </div>
@@ -63,33 +122,44 @@
         </button>
       </nav>
 
-      <!-- Action Buttons -->
-      <div class="flex items-center space-x-2">
+      <!-- User Profile Badge & Actions -->
+      <div class="flex items-center space-x-3">
+        <!-- Logged-in User Badge -->
+        <div id="user-profile-badge" class="hidden sm:flex items-center space-x-2.5 bg-slate-800/90 border border-slate-700 px-3 py-1 rounded-xl">
+          <div id="user-avatar" class="w-7 h-7 bg-indigo-500 text-white rounded-full font-bold text-xs flex items-center justify-center">
+            PK
+          </div>
+          <div class="text-left">
+            <p id="user-display-name" class="text-xs font-bold text-white leading-tight">Paul Kommer</p>
+            <p id="user-display-role" class="text-[10px] text-indigo-300 leading-tight">Consultant</p>
+          </div>
+        </div>
+
         <button onclick="generateExecutivePDFReport()" class="px-3.5 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow transition flex items-center gap-2">
           <i class="fa-solid fa-file-pdf"></i>
-          <span>Run Report</span>
+          <span class="hidden lg:inline">Run Report</span>
         </button>
+
         <button onclick="openProjectModal()" class="px-3.5 py-1.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow transition flex items-center gap-2">
           <i class="fa-solid fa-plus"></i>
           <span class="hidden sm:inline">New Project</span>
         </button>
-        <button onclick="requestPinProtectedAction('resetData')" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition" title="Reset Local Storage (PIN Protected)">
-          <i class="fa-solid fa-rotate-right"></i>
+
+        <button onclick="handleLogout()" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition" title="Log Out">
+          <i class="fa-solid fa-right-from-bracket"></i>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- GLOBAL FILTER BAR (Hidden on Pipeline tab, visible on Projects/Stage/Merchants) -->
+  <!-- GLOBAL FILTER BAR -->
   <section id="global-filter-bar" class="bg-white border-b border-slate-200 shadow-sm hidden">
     <div class="w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-        <!-- Search -->
         <div class="relative flex-1 min-w-[200px] max-w-xs">
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
           <input type="text" id="filter-search" oninput="applyFilters()" placeholder="Search projects..." class="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
         </div>
-        <!-- Stage Filter -->
         <select id="filter-stage" onchange="applyFilters()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white">
           <option value="ALL">All Stages</option>
           <option value="In Spec">In Spec</option>
@@ -98,7 +168,6 @@
           <option value="Supplied">Supplied</option>
           <option value="Lost">Lost</option>
         </select>
-        <!-- Industry Filter -->
         <select id="filter-industry" onchange="applyFilters()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white">
           <option value="ALL">All Sectors</option>
           <option value="Commercial">Commercial</option>
@@ -108,7 +177,6 @@
           <option value="Industrial">Industrial</option>
           <option value="Hospitality">Hospitality</option>
         </select>
-        <!-- Consultant Filter -->
         <select id="filter-consultant" onchange="applyFilters()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white">
           <option value="ALL">All Consultants</option>
           <option value="Paul Kommer">Paul Kommer</option>
@@ -123,7 +191,7 @@
         <button onclick="clearAllFilters()" class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
           Reset Filters
         </button>
-        <button onclick="requestPinProtectedAction('exportProjects')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition flex items-center gap-1.5" title="Export CSV (PIN Protected)">
+        <button onclick="requestPinProtectedAction('exportProjects')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition flex items-center gap-1.5" title="Export CSV">
           <i class="fa-solid fa-download"></i> Export CSV
         </button>
       </div>
@@ -133,10 +201,8 @@
   <!-- MAIN CANVAS -->
   <main class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">
 
-    <!-- 1. PIPELINE TAB -->
+    <!-- PIPELINE TAB -->
     <div id="tab-dashboard" class="space-y-6">
-      
-      <!-- Top KPI Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div>
@@ -185,7 +251,6 @@
 
       <!-- Charts Row -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Pipeline Stage Distribution Chart -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold text-slate-900">Pipeline Value by Stage</h3>
@@ -196,7 +261,6 @@
           </div>
         </div>
 
-        <!-- Industry Sector Distribution Chart -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold text-slate-900">Sector Distribution</h3>
@@ -208,10 +272,8 @@
         </div>
       </div>
 
-      <!-- Team Consultant Performance & Forecast Row -->
+      <!-- Team Performance & Forecast Row -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Results by Consultant Rep Card -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
@@ -221,13 +283,10 @@
               </div>
               <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-medium">Team Reps</span>
             </div>
-            <div id="consultant-results-list" class="space-y-2.5 mt-4">
-              <!-- Rendered via JS -->
-            </div>
+            <div id="consultant-results-list" class="space-y-2.5 mt-4"></div>
           </div>
         </div>
 
-        <!-- Est Supply Date Forecast Chart -->
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
           <div class="flex items-center justify-between mb-4">
             <div>
@@ -244,10 +303,9 @@
           </div>
         </div>
       </div>
-
     </div>
 
-    <!-- 2. PROJECTS TAB (Data Table View) -->
+    <!-- PROJECTS TAB -->
     <div id="tab-projects" class="space-y-4 hidden">
       <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
@@ -255,11 +313,9 @@
             <h2 class="text-base font-bold text-slate-900">Project Specification Register</h2>
             <span id="project-count-badge" class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded-full">0</span>
           </div>
-          <div class="flex items-center space-x-2">
-            <button onclick="openProjectModal()" class="px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition">
-              <i class="fa-solid fa-plus mr-1"></i> Add Project
-            </button>
-          </div>
+          <button onclick="openProjectModal()" class="px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition">
+            <i class="fa-solid fa-plus mr-1"></i> Add Project
+          </button>
         </div>
 
         <div class="overflow-x-auto custom-scrollbar">
@@ -277,77 +333,58 @@
                 <th class="py-3 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody id="projects-table-body" class="divide-y divide-slate-200">
-              <!-- Rendered dynamically -->
-            </tbody>
+            <tbody id="projects-table-body" class="divide-y divide-slate-200"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- 3. STAGE VIEW TAB (Kanban Board) -->
+    <!-- STAGE VIEW TAB -->
     <div id="tab-stage-view" class="hidden">
       <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 custom-scrollbar">
-        
-        <!-- Stage Column: In Spec -->
         <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
           <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
-            <span class="font-bold text-xs uppercase tracking-wider text-blue-700 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-blue-500"></span> In Spec
-            </span>
+            <span class="font-bold text-xs uppercase tracking-wider text-blue-700 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span> In Spec</span>
             <span id="kanban-count-In-Spec" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
           </div>
           <div id="kanban-col-In-Spec" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
         </div>
 
-        <!-- Stage Column: Tender -->
         <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
           <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
-            <span class="font-bold text-xs uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Tender
-            </span>
+            <span class="font-bold text-xs uppercase tracking-wider text-amber-700 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Tender</span>
             <span id="kanban-count-Tender" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
           </div>
           <div id="kanban-col-Tender" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
         </div>
 
-        <!-- Stage Column: Awarded -->
         <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
           <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
-            <span class="font-bold text-xs uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-indigo-500"></span> Awarded
-            </span>
+            <span class="font-bold text-xs uppercase tracking-wider text-indigo-700 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span> Awarded</span>
             <span id="kanban-count-Awarded" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
           </div>
           <div id="kanban-col-Awarded" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
         </div>
 
-        <!-- Stage Column: Supplied -->
         <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
           <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
-            <span class="font-bold text-xs uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Supplied
-            </span>
+            <span class="font-bold text-xs uppercase tracking-wider text-emerald-700 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Supplied</span>
             <span id="kanban-count-Supplied" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
           </div>
           <div id="kanban-col-Supplied" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
         </div>
 
-        <!-- Stage Column: Lost -->
         <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
           <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
-            <span class="font-bold text-xs uppercase tracking-wider text-rose-700 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-rose-500"></span> Lost
-            </span>
+            <span class="font-bold text-xs uppercase tracking-wider text-rose-700 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Lost</span>
             <span id="kanban-count-Lost" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
           </div>
           <div id="kanban-col-Lost" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
         </div>
-
       </div>
     </div>
 
-    <!-- 4. MERCHANTS TAB -->
+    <!-- MERCHANTS TAB -->
     <div id="tab-merchants" class="space-y-6 hidden">
       <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div>
@@ -355,12 +392,10 @@
           <p class="text-xs text-slate-500 mt-0.5">Projects and specified pipeline value tied to trade merchants and stockists</p>
         </div>
       </div>
-      <div id="merchants-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <!-- Rendered dynamically -->
-      </div>
+      <div id="merchants-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
     </div>
 
-    <!-- 5. CONTACTS TAB -->
+    <!-- CONTACTS TAB -->
     <div id="tab-contacts" class="space-y-6 hidden">
       <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -368,7 +403,7 @@
           <p class="text-xs text-slate-500 mt-0.5">Key contacts across Architectural practices, Consultants, Contractors, and Merchants</p>
         </div>
         <div class="flex items-center space-x-2">
-          <button onclick="requestPinProtectedAction('exportContacts')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition" title="Export Contacts CSV (PIN Protected)">
+          <button onclick="requestPinProtectedAction('exportContacts')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition">
             <i class="fa-solid fa-download mr-1"></i> Export Contacts
           </button>
           <button onclick="openContactModal()" class="px-3.5 py-1.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">
@@ -377,7 +412,6 @@
         </div>
       </div>
 
-      <!-- Contact Filters -->
       <div class="flex flex-wrap items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
         <div class="relative flex-1 min-w-[200px]">
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
@@ -394,12 +428,8 @@
         </select>
       </div>
 
-      <!-- Contacts Card Grid -->
-      <div id="contacts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <!-- Rendered dynamically -->
-      </div>
+      <div id="contacts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
     </div>
-
   </main>
 
   <!-- ADD / EDIT PROJECT MODAL -->
@@ -564,20 +594,90 @@
     </div>
   </div>
 
-  <!-- HIDDEN PRINT TEMPLATE FOR EXECUTIVE MANAGEMENT PDF REPORT -->
-  <div id="pdf-report-container" class="hidden">
-    <!-- Rendered on demand via JavaScript -->
-  </div>
-
+  <!-- HIDDEN PRINT TEMPLATE FOR PDF REPORT -->
+  <div id="pdf-report-container" class="hidden"></div>
 
   <!-- APPLICATION JAVASCRIPT LOGIC -->
   <script>
+    // --- 0. AUTHENTICATION & TEAM USERS ---
+    const DEMO_USERS = [
+      { email: "paul@streamline.com", pass: "password123", name: "Paul Kommer", role: "Lead Consultant", initials: "PK" },
+      { email: "sarah@streamline.com", pass: "password123", name: "Sarah Jenkins", role: "Senior Consultant", initials: "SJ" },
+      { email: "mark@streamline.com", pass: "password123", name: "Mark Taylor", role: "Specification Rep", initials: "MT" },
+      { email: "admin@streamline.com", pass: "streamline2026", name: "Admin User", role: "System Administrator", initials: "AD" }
+    ];
+
+    let currentUser = null;
+
+    function checkAuth() {
+      const storedSession = localStorage.getItem('streamline_session');
+      if (storedSession) {
+        try {
+          currentUser = JSON.parse(storedSession);
+          hideLoginOverlay();
+          updateUserBadgeUI();
+          return true;
+        } catch(e) { currentUser = null; }
+      }
+      showLoginOverlay();
+      return false;
+    }
+
+    function showLoginOverlay() {
+      document.getElementById('login-overlay').classList.remove('hidden');
+    }
+
+    function hideLoginOverlay() {
+      document.getElementById('login-overlay').classList.add('hidden');
+    }
+
+    function fillQuickLogin(email, pass) {
+      document.getElementById('login-email').value = email;
+      document.getElementById('login-password').value = pass;
+      document.getElementById('login-error').classList.add('hidden');
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const emailInput = document.getElementById('login-email').value.trim();
+      const passInput = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+
+      const foundUser = DEMO_USERS.find(u => u.email.toLowerCase() === emailInput.toLowerCase() && u.pass === passInput);
+
+      if (foundUser) {
+        currentUser = { email: foundUser.email, name: foundUser.name, role: foundUser.role, initials: foundUser.initials };
+        localStorage.setItem('streamline_session', JSON.stringify(currentUser));
+        errorEl.classList.add('hidden');
+        hideLoginOverlay();
+        updateUserBadgeUI();
+        renderDashboard();
+      } else {
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      if (confirm("Are you sure you want to log out of Streamline?")) {
+        localStorage.removeItem('streamline_session');
+        currentUser = null;
+        showLoginOverlay();
+      }
+    }
+
+    function updateUserBadgeUI() {
+      if (!currentUser) return;
+      document.getElementById('user-display-name').innerText = currentUser.name;
+      document.getElementById('user-display-role').innerText = currentUser.role;
+      document.getElementById('user-avatar').innerText = currentUser.initials || currentUser.name.split(' ').map(n=>n[0]).join('');
+      document.getElementById('user-profile-badge').classList.remove('hidden');
+    }
+
     // --- 1. CORE STATE & DEFAULT DATASETS ---
     const SECURITY_PIN = "7285";
     let pendingPinAction = null;
-    let forecastView = 'quarter'; // 'quarter' or 'month'
+    let forecastView = 'quarter';
 
-    // Initial Sample Project Register
     const SAMPLE_PROJECTS = [
       { id: "PRJ-101", name: "Sandton City Tower Expansion", value: 1250000, stage: "In Spec", industry: "Commercial", arch: "Paragon Architects", merchant: "Buildmax Sandton", products: ["Door Hardware", "Auto Doors"], date: "2026-11-15", consultant: "Paul Kommer", notes: "High priority spec." },
       { id: "PRJ-102", name: "Cape Town Regional Hospital", value: 2100000, stage: "Tender", industry: "Healthcare", arch: "MLB Architects", merchant: "Apex Building Supplies", products: ["Door Hardware", "Acoustic Glass"], date: "2027-02-10", consultant: "Sarah Jenkins", notes: "Antibacterial door hardware required." },
@@ -587,7 +687,6 @@
       { id: "PRJ-106", name: "Pretoria Tech Campus", value: 940000, stage: "Lost", industry: "Education", arch: "Studio Arch", merchant: "Northern Suppliers", products: ["Door Hardware"], date: "2026-07-12", consultant: "Elena Rostova", notes: "Value engineered out." }
     ];
 
-    // Initial Sample CRM Contacts
     const SAMPLE_CONTACTS = [
       { id: "CON-101", name: "Henrik van Zyl", firm: "Paragon Architects", role: "Architect", email: "henrik@paragon.co.za", phone: "+27 11 555 0192" },
       { id: "CON-102", name: "Sipho Dlamini", firm: "WBHO Construction", role: "Contractor", email: "sipho.d@wbho.co.za", phone: "+27 11 555 0833" },
@@ -668,17 +767,15 @@
         }
       });
 
-      // Filter bar auto-visibility logic
       const filterBar = document.getElementById('global-filter-bar');
       if (tabId === 'dashboard') {
-        filterBar.classList.add('hidden'); // Pipeline tab shows entire unfiltered database
+        filterBar.classList.add('hidden');
       } else if (['projects', 'stage-view', 'merchants'].includes(tabId)) {
         filterBar.classList.remove('hidden');
       } else {
         filterBar.classList.add('hidden');
       }
 
-      // Trigger view updates
       if (tabId === 'dashboard') renderDashboard();
       if (tabId === 'projects') renderTable();
       if (tabId === 'stage-view') renderKanban();
@@ -686,13 +783,12 @@
       if (tabId === 'contacts') renderContacts();
     }
 
-    // --- 5. RENDER PIPELINE DASHBOARD (UNFILTERED) ---
+    // --- 5. RENDER PIPELINE DASHBOARD ---
     let stageChartInstance = null;
     let sectorChartInstance = null;
     let forecastChartInstance = null;
 
     function renderDashboard() {
-      // 1. KPI Aggregation (Entire Database)
       const activeProjects = projects.filter(p => p.stage !== 'Lost');
       const totalActiveVal = activeProjects.reduce((sum, p) => sum + (parseFloat(p.value) || 0), 0);
       
@@ -717,10 +813,7 @@
       
       document.getElementById('kpi-win-rate').innerText = `${winRate}%`;
 
-      // 2. Results by Consultant (Team Representatives)
       renderConsultantResults();
-
-      // 3. Render Charts
       initDashboardCharts();
     }
 
@@ -728,7 +821,6 @@
       const consultants = ["Paul Kommer", "Sarah Jenkins", "Mark Taylor", "David Vance", "Elena Rostova"];
       const container = document.getElementById('consultant-results-list');
       
-      // Calculate totals per consultant
       const stats = consultants.map(cName => {
         const cProjects = projects.filter(p => p.consultant === cName && p.stage !== 'Lost');
         const totalVal = cProjects.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
@@ -754,7 +846,6 @@
     }
 
     function initDashboardCharts() {
-      // Stages Chart
       const stages = ['In Spec', 'Tender', 'Awarded', 'Supplied', 'Lost'];
       const stageValues = stages.map(stg => projects.filter(p => p.stage === stg).reduce((s, p) => s + (parseFloat(p.value) || 0), 0));
 
@@ -779,7 +870,6 @@
         }
       });
 
-      // Sector Pie Chart
       const sectors = ['Commercial', 'Healthcare', 'Education', 'Residential', 'Industrial', 'Hospitality'];
       const sectorValues = sectors.map(sec => projects.filter(p => p.industry === sec && p.stage !== 'Lost').reduce((s, p) => s + (parseFloat(p.value) || 0), 0));
 
@@ -801,7 +891,6 @@
         }
       });
 
-      // Forecast Chart (Chronological Timeline)
       renderForecastChart();
     }
 
@@ -1059,6 +1148,9 @@
         title.innerText = "Add Specification Project";
         form.reset();
         document.getElementById('project-id').value = '';
+        if (currentUser) {
+          document.getElementById('input-project-consultant').value = currentUser.name;
+        }
       }
 
       modal.classList.remove('hidden');
@@ -1084,13 +1176,11 @@
       const notes = document.getElementById('input-project-notes').value;
 
       if (id) {
-        // Edit
         const idx = projects.findIndex(p => p.id === id);
         if (idx !== -1) {
           projects[idx] = { id, name, value: val, stage, industry, arch, merchant, products, date, consultant, notes };
         }
       } else {
-        // Create
         const newProj = {
           id: 'PRJ-' + Math.floor(1000 + Math.random() * 9000),
           name, value: val, stage, industry, arch, merchant, products, date, consultant, notes
@@ -1100,16 +1190,11 @@
 
       saveProjectsToStorage();
       closeProjectModal();
-      
-      // Refresh current active view
       renderDashboard();
       applyFilters();
     }
 
-    function editProject(id) {
-      openProjectModal(id);
-    }
-
+    function editProject(id) { openProjectModal(id); }
     function deleteProject(id) {
       if (confirm("Are you sure you want to delete this project specification?")) {
         projects = projects.filter(p => p.id !== id);
@@ -1241,19 +1326,17 @@
       link.click();
     }
 
-    // --- 13. EXECUTIVE PDF MANAGEMENT REPORT GENERATOR ---
+    // --- 13. EXECUTIVE PDF REPORT ---
     function generateExecutivePDFReport() {
       const container = document.getElementById('pdf-report-container');
       const today = new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
 
-      // Calculate Metrics
       const activeProjects = projects.filter(p => p.stage !== 'Lost');
       const totalActiveVal = activeProjects.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
       const suppliedVal = projects.filter(p => p.stage === 'Supplied').reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
 
       container.innerHTML = `
         <div id="pdf-content" class="p-8 bg-white text-slate-900 space-y-6 font-sans">
-          <!-- Header -->
           <div class="border-b-2 border-indigo-600 pb-4 flex items-center justify-between">
             <div>
               <h1 class="text-2xl font-bold text-slate-900">Executive Pipeline Report</h1>
@@ -1265,7 +1348,6 @@
             </div>
           </div>
 
-          <!-- KPI Summary Box -->
           <div class="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>
               <p class="text-[10px] uppercase font-bold text-slate-500">Total Active Pipeline</p>
@@ -1284,7 +1366,6 @@
             </div>
           </div>
 
-          <!-- Consultant Matrix -->
           <div>
             <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b pb-1">Consultant Performance Summary</h3>
             <table class="w-full text-left text-xs border border-slate-200">
@@ -1311,7 +1392,6 @@
             </table>
           </div>
 
-          <!-- Top High Value Specifications -->
           <div>
             <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b pb-1">Top Active Opportunities</h3>
             <table class="w-full text-left text-xs border border-slate-200">
@@ -1356,11 +1436,11 @@
       html2pdf().set(opt).from(element).save();
     }
 
-    // --- 14. INITIALIZATION ON PAGE LOAD ---
+    // --- 14. INITIALIZATION ---
     window.addEventListener('DOMContentLoaded', () => {
       loadProjectsFromStorage();
       loadContactsFromStorage();
-      renderDashboard();
+      checkAuth();
     });
   </script>
 </body>
