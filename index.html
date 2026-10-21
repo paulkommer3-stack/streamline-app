@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Streamline - Project Pipeline & Specification Management Tool">
+  <meta name="theme-color" content="#0f172a">
+  <title>Streamline - Project Pipeline Manager</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- html2pdf.js for Executive Management PDF Report Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Brand & Tagline -->
+      <div class="flex items-center space-x-3">
+        <div class="bg-indigo-600 text-white p-2 rounded-lg flex items-center justify-center">
+          <i class="fa-solid fa-diagram-project text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            Streamline
+            <span class="text-xs bg-indigo-500/30 text-indigo-300 font-medium px-2 py-0.5 rounded border border-indigo-400/20">Local Storage</span>
+          </h1>
+          <p class="text-xs text-slate-400">Project Pipeline Manager</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/50">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-white bg-indigo-600 shadow">
+          <i class="fa-solid fa-chart-pie mr-1.5"></i>Pipeline
+        </button>
+        <button onclick="switchTab('projects')" id="nav-projects" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+          <i class="fa-solid fa-list-check mr-1.5"></i>Projects
+        </button>
+        <button onclick="switchTab('stage-view')" id="nav-stage-view" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+          <i class="fa-solid fa-kanban mr-1.5"></i>Stage View
+        </button>
+        <button onclick="switchTab('merchants')" id="nav-merchants" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+          <i class="fa-solid fa-store mr-1.5"></i>Merchants
+        </button>
+        <button onclick="switchTab('contacts')" id="nav-contacts" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all text-slate-300 hover:text-white hover:bg-slate-700/50">
+          <i class="fa-solid fa-address-book mr-1.5"></i>Contacts
+        </button>
+      </nav>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center space-x-2">
+        <button onclick="generateExecutivePDFReport()" class="px-3.5 py-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-file-pdf"></i>
+          <span>Run Report</span>
+        </button>
+        <button onclick="openProjectModal()" class="px-3.5 py-1.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow transition flex items-center gap-2">
+          <i class="fa-solid fa-plus"></i>
+          <span class="hidden sm:inline">New Project</span>
+        </button>
+        <button onclick="requestPinProtectedAction('resetData')" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition" title="Reset Local Storage (PIN Protected)">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- GLOBAL FILTER BAR (Hidden on Pipeline tab, visible on Projects/Stage/Merchants) -->
+  <section id="global-filter-bar" class="bg-white border-b border-slate-200 shadow-sm hidden">
+    <div class="w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+        <!-- Search -->
+        <div class="relative flex-1 min-w-[200px] max-w-xs">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+          <input type="text" id="filter-search" oninput="applyFilters()" placeholder="Search projects..." class="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+        </div>
+        <!-- Stage Filter -->
+        <select id="filter-stage" onchange="applyFilters()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white">
+          <option value="ALL">All Stages</option>
+          <option value="In Spec">In Spec</option>
+          <option value="Tender">Tender</option>
+          <option value="Awarded">Awarded</option>
+          <option value="Supplied">Supplied</option>
+          <option value="Lost">Lost</option>
+        </select>
+        <!-- Industry Filter -->
+        <select id="filter-industry" onchange="applyFilters()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white">
+          <option value="ALL">All Sectors</option>
+          <option value="Commercial">Commercial</option>
+          <option value="Healthcare">Healthcare</option>
+          <option value="Education">Education</option>
+          <option value="Residential">Residential</option>
+          <option value="Industrial">Industrial</option>
+          <option value="Hospitality">Hospitality</option>
+        </select>
+        <!-- Consultant Filter -->
+        <select id="filter-consultant" onchange="applyFilters()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white">
+          <option value="ALL">All Consultants</option>
+          <option value="Paul Kommer">Paul Kommer</option>
+          <option value="Sarah Jenkins">Sarah Jenkins</option>
+          <option value="Mark Taylor">Mark Taylor</option>
+          <option value="David Vance">David Vance</option>
+          <option value="Elena Rostova">Elena Rostova</option>
+        </select>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button onclick="clearAllFilters()" class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          Reset Filters
+        </button>
+        <button onclick="requestPinProtectedAction('exportProjects')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition flex items-center gap-1.5" title="Export CSV (PIN Protected)">
+          <i class="fa-solid fa-download"></i> Export CSV
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN CANVAS -->
+  <main class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- 1. PIPELINE TAB -->
+    <div id="tab-dashboard" class="space-y-6">
+      
+      <!-- Top KPI Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Active Value</p>
+            <h3 id="kpi-total-val" class="text-2xl font-bold text-slate-900 mt-1">R 0</h3>
+            <p id="kpi-total-qty" class="text-xs text-slate-500 mt-1">0 projects in pipeline</p>
+          </div>
+          <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
+            <i class="fa-solid fa-vault"></i>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sales Potential (In Spec)</p>
+            <h3 id="kpi-spec-val" class="text-2xl font-bold text-slate-900 mt-1">R 0</h3>
+            <p id="kpi-spec-qty" class="text-xs text-indigo-600 font-medium mt-1">0 specified projects</p>
+          </div>
+          <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
+            <i class="fa-solid fa-file-signature"></i>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Won / Supplied Value</p>
+            <h3 id="kpi-supplied-val" class="text-2xl font-bold text-emerald-600 mt-1">R 0</h3>
+            <p id="kpi-supplied-qty" class="text-xs text-emerald-700 font-medium mt-1">0 orders fulfilled</p>
+          </div>
+          <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Conversion Win Rate</p>
+            <h3 id="kpi-win-rate" class="text-2xl font-bold text-slate-900 mt-1">0%</h3>
+            <p class="text-xs text-slate-500 mt-1">Supplied vs total closed</p>
+          </div>
+          <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Pipeline Stage Distribution Chart -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-slate-900">Pipeline Value by Stage</h3>
+            <span class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md font-medium">Entire Database</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-stages"></canvas>
+          </div>
+        </div>
+
+        <!-- Industry Sector Distribution Chart -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-semibold text-slate-900">Sector Distribution</h3>
+            <span class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md font-medium">By Industry</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-industries"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team Consultant Performance & Forecast Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Results by Consultant Rep Card -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 class="text-base font-semibold text-slate-900">Results by Consultant</h3>
+                <p class="text-xs text-slate-500">Internal sales reps calling on practices</p>
+              </div>
+              <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-medium">Team Reps</span>
+            </div>
+            <div id="consultant-results-list" class="space-y-2.5 mt-4">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Est Supply Date Forecast Chart -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm lg:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-semibold text-slate-900">Est Supply Date Sales Forecast</h3>
+              <p class="text-xs text-slate-500">Chronological timeline of projected material supply</p>
+            </div>
+            <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg text-xs font-medium">
+              <button onclick="setForecastView('quarter')" id="btn-forecast-quarter" class="px-2.5 py-1 rounded bg-white text-slate-800 shadow-xs">By Quarter</button>
+              <button onclick="setForecastView('month')" id="btn-forecast-month" class="px-2.5 py-1 rounded text-slate-600 hover:text-slate-900">By Month</button>
+            </div>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chart-forecast"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 2. PROJECTS TAB (Data Table View) -->
+    <div id="tab-projects" class="space-y-4 hidden">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div class="flex items-center space-x-2">
+            <h2 class="text-base font-bold text-slate-900">Project Specification Register</h2>
+            <span id="project-count-badge" class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded-full">0</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="openProjectModal()" class="px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition">
+              <i class="fa-solid fa-plus mr-1"></i> Add Project
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left text-sm text-slate-600">
+            <thead class="bg-slate-100/80 text-xs text-slate-700 uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4 font-semibold">Project Name</th>
+                <th class="py-3 px-4 font-semibold">Sales Potential</th>
+                <th class="py-3 px-4 font-semibold">Stage</th>
+                <th class="py-3 px-4 font-semibold">Arch / Cons</th>
+                <th class="py-3 px-4 font-semibold">Merchant / Contractor</th>
+                <th class="py-3 px-4 font-semibold">Specified Products</th>
+                <th class="py-3 px-4 font-semibold">Est Supply Date</th>
+                <th class="py-3 px-4 font-semibold">Consultant</th>
+                <th class="py-3 px-4 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="projects-table-body" class="divide-y divide-slate-200">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. STAGE VIEW TAB (Kanban Board) -->
+    <div id="tab-stage-view" class="hidden">
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 custom-scrollbar">
+        
+        <!-- Stage Column: In Spec -->
+        <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
+            <span class="font-bold text-xs uppercase tracking-wider text-blue-700 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span> In Spec
+            </span>
+            <span id="kanban-count-In-Spec" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
+          </div>
+          <div id="kanban-col-In-Spec" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
+        </div>
+
+        <!-- Stage Column: Tender -->
+        <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
+            <span class="font-bold text-xs uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Tender
+            </span>
+            <span id="kanban-count-Tender" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
+          </div>
+          <div id="kanban-col-Tender" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
+        </div>
+
+        <!-- Stage Column: Awarded -->
+        <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
+            <span class="font-bold text-xs uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span> Awarded
+            </span>
+            <span id="kanban-count-Awarded" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
+          </div>
+          <div id="kanban-col-Awarded" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
+        </div>
+
+        <!-- Stage Column: Supplied -->
+        <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
+            <span class="font-bold text-xs uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Supplied
+            </span>
+            <span id="kanban-count-Supplied" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
+          </div>
+          <div id="kanban-col-Supplied" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
+        </div>
+
+        <!-- Stage Column: Lost -->
+        <div class="bg-slate-100/80 rounded-xl p-3 border border-slate-200/80 flex flex-col h-full min-w-[260px]">
+          <div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-300/60">
+            <span class="font-bold text-xs uppercase tracking-wider text-rose-700 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-rose-500"></span> Lost
+            </span>
+            <span id="kanban-count-Lost" class="text-xs bg-white text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">0</span>
+          </div>
+          <div id="kanban-col-Lost" class="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[70vh] p-1"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 4. MERCHANTS TAB -->
+    <div id="tab-merchants" class="space-y-6 hidden">
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Merchant Stockist Fulfillment Matrix</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Projects and specified pipeline value tied to trade merchants and stockists</p>
+        </div>
+      </div>
+      <div id="merchants-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- 5. CONTACTS TAB -->
+    <div id="tab-contacts" class="space-y-6 hidden">
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Stakeholder CRM Register</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Key contacts across Architectural practices, Consultants, Contractors, and Merchants</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="requestPinProtectedAction('exportContacts')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg transition" title="Export Contacts CSV (PIN Protected)">
+            <i class="fa-solid fa-download mr-1"></i> Export Contacts
+          </button>
+          <button onclick="openContactModal()" class="px-3.5 py-1.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">
+            <i class="fa-solid fa-user-plus mr-1"></i> Add Contact
+          </button>
+        </div>
+      </div>
+
+      <!-- Contact Filters -->
+      <div class="flex flex-wrap items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+        <div class="relative flex-1 min-w-[200px]">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+          <input type="text" id="contact-search" oninput="applyContactFilters()" placeholder="Search contact name, firm, or email..." class="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <select id="contact-role-filter" onchange="applyContactFilters()" class="px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="ALL">All Roles</option>
+          <option value="Architect">Architect</option>
+          <option value="Consultant">Consultant</option>
+          <option value="Merchant Stockist">Merchant Stockist</option>
+          <option value="Contractor">Contractor</option>
+          <option value="PQS">PQS</option>
+          <option value="Developer">Developer</option>
+        </select>
+      </div>
+
+      <!-- Contacts Card Grid -->
+      <div id="contacts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ADD / EDIT PROJECT MODAL -->
+  <div id="modal-project" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 id="modal-project-title" class="text-base font-bold">Add Specification Project</h3>
+        <button onclick="closeProjectModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <form id="form-project" onsubmit="handleProjectSubmit(event)" class="p-6 overflow-y-auto space-y-4 custom-scrollbar text-sm">
+        <input type="hidden" id="project-id">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Project Name *</label>
+            <input type="text" id="input-project-name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Sales Potential (R) *</label>
+            <input type="number" step="any" id="input-project-val" required placeholder="e.g. 450000" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Stage *</label>
+            <select id="input-project-stage" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+              <option value="In Spec">In Spec</option>
+              <option value="Tender">Tender</option>
+              <option value="Awarded">Awarded</option>
+              <option value="Supplied">Supplied</option>
+              <option value="Lost">Lost</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Industry Sector *</label>
+            <select id="input-project-industry" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+              <option value="Commercial">Commercial</option>
+              <option value="Healthcare">Healthcare</option>
+              <option value="Education">Education</option>
+              <option value="Residential">Residential</option>
+              <option value="Industrial">Industrial</option>
+              <option value="Hospitality">Hospitality</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Est Supply Date *</label>
+            <input type="date" id="input-project-date" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Arch / Cons (Key Specifier Firm)</label>
+            <input type="text" id="input-project-arch" placeholder="e.g. Paragon Architects" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Merchant / Contractor</label>
+            <input type="text" id="input-project-merchant" placeholder="e.g. Buildmax Merchant / WBHO" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Consultant (Team Rep calling on practice)</label>
+            <select id="input-project-consultant" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+              <option value="Paul Kommer">Paul Kommer</option>
+              <option value="Sarah Jenkins">Sarah Jenkins</option>
+              <option value="Mark Taylor">Mark Taylor</option>
+              <option value="David Vance">David Vance</option>
+              <option value="Elena Rostova">Elena Rostova</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Specified Products (Comma Separated)</label>
+            <input type="text" id="input-project-products" placeholder="e.g. Door Hardware, Auto Doors, Glass" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Notes & Specification Remarks</label>
+          <textarea id="input-project-notes" rows="3" placeholder="Additional details..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 flex items-center justify-end space-x-3">
+          <button type="button" onclick="closeProjectModal()" class="px-4 py-2 text-slate-600 hover:text-slate-900 text-sm font-medium">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition shadow">Save Project</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT CONTACT MODAL -->
+  <div id="modal-contact" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 id="modal-contact-title" class="text-base font-bold">Add CRM Contact</h3>
+        <button onclick="closeContactModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <form id="form-contact" onsubmit="handleContactSubmit(event)" class="p-6 space-y-4 text-sm">
+        <input type="hidden" id="contact-id">
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Full Name *</label>
+          <input type="text" id="input-contact-name" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Firm / Organization *</label>
+            <input type="text" id="input-contact-firm" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Stakeholder Role *</label>
+            <select id="input-contact-role" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+              <option value="Architect">Architect</option>
+              <option value="Consultant">Consultant</option>
+              <option value="Merchant Stockist">Merchant Stockist</option>
+              <option value="Contractor">Contractor</option>
+              <option value="PQS">PQS</option>
+              <option value="Developer">Developer</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Email Address</label>
+            <input type="email" id="input-contact-email" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Phone Number</label>
+            <input type="text" id="input-contact-phone" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 flex items-center justify-end space-x-3">
+          <button type="button" onclick="closeContactModal()" class="px-4 py-2 text-slate-600 hover:text-slate-900 text-sm font-medium">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition shadow">Save Contact</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PIN SECURITY MODAL -->
+  <div id="modal-pin" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl">
+      <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-900">Security PIN Required</h3>
+      <p class="text-xs text-slate-500 mt-1 mb-4">Please enter the administrative security PIN to proceed.</p>
+      
+      <input type="password" id="input-pin" maxlength="4" placeholder="••••" class="w-32 text-center text-2xl tracking-widest px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none mb-4 mx-auto">
+      
+      <div class="flex items-center justify-center space-x-2">
+        <button onclick="closePinModal()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-900">Cancel</button>
+        <button onclick="verifyPinAndExecute()" class="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition shadow">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIDDEN PRINT TEMPLATE FOR EXECUTIVE MANAGEMENT PDF REPORT -->
+  <div id="pdf-report-container" class="hidden">
+    <!-- Rendered on demand via JavaScript -->
+  </div>
+
+
+  <!-- APPLICATION JAVASCRIPT LOGIC -->
+  <script>
+    // --- 1. CORE STATE & DEFAULT DATASETS ---
+    const SECURITY_PIN = "7285";
+    let pendingPinAction = null;
+    let forecastView = 'quarter'; // 'quarter' or 'month'
+
+    // Initial Sample Project Register
+    const SAMPLE_PROJECTS = [
+      { id: "PRJ-101", name: "Sandton City Tower Expansion", value: 1250000, stage: "In Spec", industry: "Commercial", arch: "Paragon Architects", merchant: "Buildmax Sandton", products: ["Door Hardware", "Auto Doors"], date: "2026-11-15", consultant: "Paul Kommer", notes: "High priority spec." },
+      { id: "PRJ-102", name: "Cape Town Regional Hospital", value: 2100000, stage: "Tender", industry: "Healthcare", arch: "MLB Architects", merchant: "Apex Building Supplies", products: ["Door Hardware", "Acoustic Glass"], date: "2027-02-10", consultant: "Sarah Jenkins", notes: "Antibacterial door hardware required." },
+      { id: "PRJ-103", name: "Durban Logistics Hub", value: 850000, stage: "Awarded", industry: "Industrial", arch: "Evolve Design Studio", merchant: "Coastal Merchants", products: ["Industrial Automation"], date: "2026-09-20", consultant: "Mark Taylor", notes: "Contractor appointed." },
+      { id: "PRJ-104", name: "Rosebank Student Living", value: 620000, stage: "Supplied", industry: "Education", arch: "Boogertman & Partners", merchant: "Buildmax Rosebank", products: ["Door Hardware"], date: "2026-08-05", consultant: "Paul Kommer", notes: "Delivered on schedule." },
+      { id: "PRJ-105", name: "Waterfront Luxury Suites", value: 1750000, stage: "In Spec", industry: "Hospitality", arch: "DHK Architects", merchant: "Citadel Hardware", products: ["Auto Doors", "Glass"], date: "2027-05-18", consultant: "David Vance", notes: "Premium finish requested." },
+      { id: "PRJ-106", name: "Pretoria Tech Campus", value: 940000, stage: "Lost", industry: "Education", arch: "Studio Arch", merchant: "Northern Suppliers", products: ["Door Hardware"], date: "2026-07-12", consultant: "Elena Rostova", notes: "Value engineered out." }
+    ];
+
+    // Initial Sample CRM Contacts
+    const SAMPLE_CONTACTS = [
+      { id: "CON-101", name: "Henrik van Zyl", firm: "Paragon Architects", role: "Architect", email: "henrik@paragon.co.za", phone: "+27 11 555 0192" },
+      { id: "CON-102", name: "Sipho Dlamini", firm: "WBHO Construction", role: "Contractor", email: "sipho.d@wbho.co.za", phone: "+27 11 555 0833" },
+      { id: "CON-103", name: "Claire Redfield", firm: "Buildmax Sandton", role: "Merchant Stockist", email: "credfield@buildmax.co.za", phone: "+27 11 555 0411" },
+      { id: "CON-104", name: "Gavin Smith", firm: "CP de Leeuw Quantity Surveyors", role: "PQS", email: "gavin@cpdl.co.za", phone: "+27 21 555 0922" }
+    ];
+
+    let projects = [];
+    let contacts = [];
+
+    // --- 2. LOCAL STORAGE MANAGERS ---
+    function loadProjectsFromStorage() {
+      const stored = localStorage.getItem('streamline_projects');
+      if (stored) {
+        try { projects = JSON.parse(stored); } catch(e) { projects = [...SAMPLE_PROJECTS]; }
+      } else {
+        projects = [...SAMPLE_PROJECTS];
+        saveProjectsToStorage();
+      }
+    }
+
+    function saveProjectsToStorage() {
+      localStorage.setItem('streamline_projects', JSON.stringify(projects));
+    }
+
+    function loadContactsFromStorage() {
+      const stored = localStorage.getItem('streamline_contacts');
+      if (stored) {
+        try { contacts = JSON.parse(stored); } catch(e) { contacts = [...SAMPLE_CONTACTS]; }
+      } else {
+        contacts = [...SAMPLE_CONTACTS];
+        saveContactsToStorage();
+      }
+    }
+
+    function saveContactsToStorage() {
+      localStorage.setItem('streamline_contacts', JSON.stringify(contacts));
+    }
+
+    // --- 3. FORMATTING HELPERS ---
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR', maximumFractionDigits: 0 }).format(amount || 0);
+    }
+
+    function getStatusBadge(stage) {
+      switch (stage) {
+        case 'In Spec': return `<span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-xs font-semibold">In Spec</span>`;
+        case 'Tender': return `<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-xs font-semibold">Tender</span>`;
+        case 'Awarded': return `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded text-xs font-semibold">Awarded</span>`;
+        case 'Supplied': return `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-xs font-semibold">Supplied</span>`;
+        case 'Lost': return `<span class="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded text-xs font-semibold">Lost</span>`;
+        default: return `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">${stage}</span>`;
+      }
+    }
+
+    function getProductBadges(productsArr) {
+      if (!productsArr || !Array.isArray(productsArr)) return '<span class="text-slate-400 text-xs">None</span>';
+      return productsArr.map(p => `<span class="inline-block bg-slate-100 text-slate-700 border border-slate-200 text-[11px] px-1.5 py-0.5 rounded mr-1 mb-0.5">${p}</span>`).join('');
+    }
+
+    // --- 4. TAB NAVIGATION & VIEW SWITCHING ---
+    function switchTab(tabId) {
+      ['dashboard', 'projects', 'stage-view', 'merchants', 'contacts'].forEach(t => {
+        const tabEl = document.getElementById(`tab-${t}`);
+        const navEl = document.getElementById(`nav-${t}`);
+        if (t === tabId) {
+          tabEl.classList.remove('hidden');
+          if (navEl) {
+            navEl.classList.add('bg-indigo-600', 'text-white', 'shadow');
+            navEl.classList.remove('text-slate-300', 'hover:bg-slate-700/50');
+          }
+        } else {
+          tabEl.classList.add('hidden');
+          if (navEl) {
+            navEl.classList.remove('bg-indigo-600', 'text-white', 'shadow');
+            navEl.classList.add('text-slate-300', 'hover:bg-slate-700/50');
+          }
+        }
+      });
+
+      // Filter bar auto-visibility logic
+      const filterBar = document.getElementById('global-filter-bar');
+      if (tabId === 'dashboard') {
+        filterBar.classList.add('hidden'); // Pipeline tab shows entire unfiltered database
+      } else if (['projects', 'stage-view', 'merchants'].includes(tabId)) {
+        filterBar.classList.remove('hidden');
+      } else {
+        filterBar.classList.add('hidden');
+      }
+
+      // Trigger view updates
+      if (tabId === 'dashboard') renderDashboard();
+      if (tabId === 'projects') renderTable();
+      if (tabId === 'stage-view') renderKanban();
+      if (tabId === 'merchants') renderMerchants();
+      if (tabId === 'contacts') renderContacts();
+    }
+
+    // --- 5. RENDER PIPELINE DASHBOARD (UNFILTERED) ---
+    let stageChartInstance = null;
+    let sectorChartInstance = null;
+    let forecastChartInstance = null;
+
+    function renderDashboard() {
+      // 1. KPI Aggregation (Entire Database)
+      const activeProjects = projects.filter(p => p.stage !== 'Lost');
+      const totalActiveVal = activeProjects.reduce((sum, p) => sum + (parseFloat(p.value) || 0), 0);
+      
+      const specProjects = projects.filter(p => p.stage === 'In Spec');
+      const totalSpecVal = specProjects.reduce((sum, p) => sum + (parseFloat(p.value) || 0), 0);
+      
+      const suppliedProjects = projects.filter(p => p.stage === 'Supplied');
+      const totalSuppliedVal = suppliedProjects.reduce((sum, p) => sum + (parseFloat(p.value) || 0), 0);
+
+      const lostProjects = projects.filter(p => p.stage === 'Lost');
+      const closedCount = suppliedProjects.length + lostProjects.length;
+      const winRate = closedCount > 0 ? Math.round((suppliedProjects.length / closedCount) * 100) : 0;
+
+      document.getElementById('kpi-total-val').innerText = formatCurrency(totalActiveVal);
+      document.getElementById('kpi-total-qty').innerText = `${activeProjects.length} projects in pipeline`;
+      
+      document.getElementById('kpi-spec-val').innerText = formatCurrency(totalSpecVal);
+      document.getElementById('kpi-spec-qty').innerText = `${specProjects.length} specified opportunities`;
+      
+      document.getElementById('kpi-supplied-val').innerText = formatCurrency(totalSuppliedVal);
+      document.getElementById('kpi-supplied-qty').innerText = `${suppliedProjects.length} orders fulfilled`;
+      
+      document.getElementById('kpi-win-rate').innerText = `${winRate}%`;
+
+      // 2. Results by Consultant (Team Representatives)
+      renderConsultantResults();
+
+      // 3. Render Charts
+      initDashboardCharts();
+    }
+
+    function renderConsultantResults() {
+      const consultants = ["Paul Kommer", "Sarah Jenkins", "Mark Taylor", "David Vance", "Elena Rostova"];
+      const container = document.getElementById('consultant-results-list');
+      
+      // Calculate totals per consultant
+      const stats = consultants.map(cName => {
+        const cProjects = projects.filter(p => p.consultant === cName && p.stage !== 'Lost');
+        const totalVal = cProjects.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+        return { name: cName, qty: cProjects.length, val: totalVal };
+      }).sort((a, b) => b.val - a.val);
+
+      container.innerHTML = stats.map(s => `
+        <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-200/60 hover:bg-indigo-50/40 transition">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center">
+              ${s.name.split(' ').map(n=>n[0]).join('')}
+            </div>
+            <div>
+              <p class="text-xs font-bold text-slate-800">${s.name}</p>
+              <p class="text-[11px] text-slate-500">${s.qty} Active Specifications</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-xs font-bold text-indigo-950">${formatCurrency(s.val)}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function initDashboardCharts() {
+      // Stages Chart
+      const stages = ['In Spec', 'Tender', 'Awarded', 'Supplied', 'Lost'];
+      const stageValues = stages.map(stg => projects.filter(p => p.stage === stg).reduce((s, p) => s + (parseFloat(p.value) || 0), 0));
+
+      const ctxStage = document.getElementById('chart-stages').getContext('2d');
+      if (stageChartInstance) stageChartInstance.destroy();
+      stageChartInstance = new Chart(ctxStage, {
+        type: 'bar',
+        data: {
+          labels: stages,
+          datasets: [{
+            label: 'Sales Potential (R)',
+            data: stageValues,
+            backgroundColor: ['#3b82f6', '#f59e0b', '#6366f1', '#10b981', '#f43f5e'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { ticks: { callback: v => 'R ' + (v/1000) + 'k' } } }
+        }
+      });
+
+      // Sector Pie Chart
+      const sectors = ['Commercial', 'Healthcare', 'Education', 'Residential', 'Industrial', 'Hospitality'];
+      const sectorValues = sectors.map(sec => projects.filter(p => p.industry === sec && p.stage !== 'Lost').reduce((s, p) => s + (parseFloat(p.value) || 0), 0));
+
+      const ctxSector = document.getElementById('chart-industries').getContext('2d');
+      if (sectorChartInstance) sectorChartInstance.destroy();
+      sectorChartInstance = new Chart(ctxSector, {
+        type: 'doughnut',
+        data: {
+          labels: sectors,
+          datasets: [{
+            data: sectorValues,
+            backgroundColor: ['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+        }
+      });
+
+      // Forecast Chart (Chronological Timeline)
+      renderForecastChart();
+    }
+
+    function setForecastView(mode) {
+      forecastView = mode;
+      document.getElementById('btn-forecast-quarter').className = mode === 'quarter' ? 'px-2.5 py-1 rounded bg-white text-slate-800 shadow-xs font-semibold' : 'px-2.5 py-1 rounded text-slate-600 hover:text-slate-900';
+      document.getElementById('btn-forecast-month').className = mode === 'month' ? 'px-2.5 py-1 rounded bg-white text-slate-800 shadow-xs font-semibold' : 'px-2.5 py-1 rounded text-slate-600 hover:text-slate-900';
+      renderForecastChart();
+    }
+
+    function renderForecastChart() {
+      const activeProjects = projects.filter(p => p.stage !== 'Lost' && p.date);
+      const groups = {};
+
+      activeProjects.forEach(p => {
+        const d = new Date(p.date);
+        if (isNaN(d)) return;
+        
+        let key = '';
+        let sortOrder = 0;
+
+        if (forecastView === 'quarter') {
+          const q = Math.floor(d.getMonth() / 3) + 1;
+          key = `Q${q} ${d.getFullYear()}`;
+          sortOrder = d.getFullYear() * 10 + q;
+        } else {
+          key = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+          sortOrder = d.getFullYear() * 100 + (d.getMonth() + 1);
+        }
+
+        if (!groups[key]) groups[key] = { key, sortOrder, val: 0 };
+        groups[key].val += (parseFloat(p.value) || 0);
+      });
+
+      const sortedGroups = Object.values(groups).sort((a, b) => a.sortOrder - b.sortOrder);
+      const labels = sortedGroups.map(g => g.key);
+      const dataVals = sortedGroups.map(g => g.val);
+
+      const ctxForecast = document.getElementById('chart-forecast').getContext('2d');
+      if (forecastChartInstance) forecastChartInstance.destroy();
+      forecastChartInstance = new Chart(ctxForecast, {
+        type: 'line',
+        data: {
+          labels: labels.length ? labels : ['No Dates Recorded'],
+          datasets: [{
+            label: 'Estimated Supply Value (R)',
+            data: dataVals.length ? dataVals : [0],
+            borderColor: '#4f46e5',
+            backgroundColor: 'rgba(79, 70, 229, 0.08)',
+            fill: true,
+            tension: 0.3,
+            pointBackgroundColor: '#4f46e5',
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { ticks: { callback: v => 'R ' + (v/1000) + 'k' } } }
+        }
+      });
+    }
+
+    // --- 6. FILTER & TABLE VIEW LOGIC ---
+    function getFilteredProjects() {
+      const q = document.getElementById('filter-search').value.toLowerCase();
+      const stg = document.getElementById('filter-stage').value;
+      const ind = document.getElementById('filter-industry').value;
+      const con = document.getElementById('filter-consultant').value;
+
+      return projects.filter(p => {
+        const matchQ = !q || p.name.toLowerCase().includes(q) || (p.arch && p.arch.toLowerCase().includes(q)) || (p.merchant && p.merchant.toLowerCase().includes(q));
+        const matchStg = stg === 'ALL' || p.stage === stg;
+        const matchInd = ind === 'ALL' || p.industry === ind;
+        const matchCon = con === 'ALL' || p.consultant === con;
+        return matchQ && matchStg && matchInd && matchCon;
+      });
+    }
+
+    function applyFilters() {
+      renderTable();
+      renderKanban();
+      renderMerchants();
+    }
+
+    function clearAllFilters() {
+      document.getElementById('filter-search').value = '';
+      document.getElementById('filter-stage').value = 'ALL';
+      document.getElementById('filter-industry').value = 'ALL';
+      document.getElementById('filter-consultant').value = 'ALL';
+      applyFilters();
+    }
+
+    function renderTable() {
+      const list = getFilteredProjects();
+      const tbody = document.getElementById('projects-table-body');
+      document.getElementById('project-count-badge').innerText = list.length;
+
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">No projects match the current criteria.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(p => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="py-3 px-4 font-bold text-slate-900">${p.name}</td>
+          <td class="py-3 px-4 font-semibold text-slate-800">${formatCurrency(p.value)}</td>
+          <td class="py-3 px-4">${getStatusBadge(p.stage)}</td>
+          <td class="py-3 px-4 text-xs font-medium text-slate-600">${p.arch || '-'}</td>
+          <td class="py-3 px-4 text-xs font-medium text-slate-600">${p.merchant || '-'}</td>
+          <td class="py-3 px-4">${getProductBadges(p.products)}</td>
+          <td class="py-3 px-4 text-xs text-slate-500">${p.date || '-'}</td>
+          <td class="py-3 px-4 text-xs font-medium text-slate-700">${p.consultant || '-'}</td>
+          <td class="py-3 px-4 text-right space-x-1">
+            <button onclick="editProject('${p.id}')" class="p-1.5 text-slate-500 hover:text-indigo-600 rounded transition"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="deleteProject('${p.id}')" class="p-1.5 text-slate-500 hover:text-rose-600 rounded transition"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // --- 7. KANBAN BOARD RENDERER ---
+    function renderKanban() {
+      const list = getFilteredProjects();
+      const stages = ['In Spec', 'Tender', 'Awarded', 'Supplied', 'Lost'];
+
+      stages.forEach(stg => {
+        const stgProjects = list.filter(p => p.stage === stg);
+        const colEl = document.getElementById(`kanban-col-${stg.replace(' ', '-')}`);
+        const countEl = document.getElementById(`kanban-count-${stg.replace(' ', '-')}`);
+        
+        if (countEl) countEl.innerText = stgProjects.length;
+
+        if (colEl) {
+          colEl.innerHTML = stgProjects.map(p => `
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs hover:shadow-md transition space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <h4 class="font-bold text-sm text-slate-900 leading-snug">${p.name}</h4>
+                <button onclick="editProject('${p.id}')" class="text-slate-400 hover:text-indigo-600 text-xs"><i class="fa-solid fa-pen"></i></button>
+              </div>
+              <p class="text-sm font-bold text-indigo-950">${formatCurrency(p.value)}</p>
+              <div class="text-xs text-slate-500 space-y-0.5">
+                <p><i class="fa-solid fa-building text-slate-400 mr-1"></i> ${p.arch || 'No Arch'}</p>
+                <p><i class="fa-solid fa-user text-slate-400 mr-1"></i> ${p.consultant}</p>
+                <p><i class="fa-solid fa-calendar text-slate-400 mr-1"></i> ${p.date}</p>
+              </div>
+              <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">${p.industry}</span>
+                <div>${getProductBadges(p.products)}</div>
+              </div>
+            </div>
+          `).join('');
+        }
+      });
+    }
+
+    // --- 8. MERCHANTS TAB RENDERER ---
+    function renderMerchants() {
+      const grid = document.getElementById('merchants-grid');
+      const merchantMap = {};
+
+      projects.forEach(p => {
+        const mName = p.merchant || 'Unassigned / Direct';
+        if (!merchantMap[mName]) {
+          merchantMap[mName] = { name: mName, totalVal: 0, count: 0, projects: [] };
+        }
+        merchantMap[mName].totalVal += (parseFloat(p.value) || 0);
+        merchantMap[mName].count += 1;
+        merchantMap[mName].projects.push(p);
+      });
+
+      const list = Object.values(merchantMap).sort((a, b) => b.totalVal - a.totalVal);
+
+      grid.innerHTML = list.map(m => `
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 class="font-bold text-base text-slate-900">${m.name}</h3>
+                <p class="text-xs text-slate-500">${m.count} associated specifications</p>
+              </div>
+              <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-bold">
+                <i class="fa-solid fa-store"></i>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100">
+              <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Pipeline Potential</p>
+              <p class="text-xl font-bold text-indigo-950 mt-0.5">${formatCurrency(m.totalVal)}</p>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // --- 9. CONTACTS CRM RENDERER & ACTIONS ---
+    function applyContactFilters() {
+      renderContacts();
+    }
+
+    function renderContacts() {
+      const q = document.getElementById('contact-search').value.toLowerCase();
+      const role = document.getElementById('contact-role-filter').value;
+
+      const filtered = contacts.filter(c => {
+        const matchQ = !q || c.name.toLowerCase().includes(q) || c.firm.toLowerCase().includes(q) || (c.email && c.email.toLowerCase().includes(q));
+        const matchRole = role === 'ALL' || c.role === role;
+        return matchQ && matchRole;
+      });
+
+      const grid = document.getElementById('contacts-grid');
+      grid.innerHTML = filtered.map(c => `
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-start justify-between">
+            <div>
+              <h4 class="font-bold text-sm text-slate-900">${c.name}</h4>
+              <p class="text-xs text-slate-600 font-medium">${c.firm}</p>
+            </div>
+            <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">${c.role}</span>
+          </div>
+          <div class="text-xs text-slate-500 space-y-1 pt-2 border-t border-slate-100">
+            <p><i class="fa-solid fa-envelope text-slate-400 mr-1.5"></i> ${c.email || 'No email'}</p>
+            <p><i class="fa-solid fa-phone text-slate-400 mr-1.5"></i> ${c.phone || 'No phone'}</p>
+          </div>
+          <div class="pt-2 flex justify-end space-x-1 border-t border-slate-100">
+            <button onclick="editContact('${c.id}')" class="text-xs text-slate-500 hover:text-indigo-600 px-2 py-1"><i class="fa-solid fa-pen"></i> Edit</button>
+            <button onclick="deleteContact('${c.id}')" class="text-xs text-slate-500 hover:text-rose-600 px-2 py-1"><i class="fa-solid fa-trash"></i> Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // --- 10. PROJECT FORM MODAL HANDLERS ---
+    function openProjectModal(editId = null) {
+      const modal = document.getElementById('modal-project');
+      const title = document.getElementById('modal-project-title');
+      const form = document.getElementById('form-project');
+
+      if (editId) {
+        const p = projects.find(item => item.id === editId);
+        if (!p) return;
+        title.innerText = "Edit Specification Project";
+        document.getElementById('project-id').value = p.id;
+        document.getElementById('input-project-name').value = p.name;
+        document.getElementById('input-project-val').value = p.value;
+        document.getElementById('input-project-stage').value = p.stage;
+        document.getElementById('input-project-industry').value = p.industry;
+        document.getElementById('input-project-date').value = p.date;
+        document.getElementById('input-project-arch').value = p.arch || '';
+        document.getElementById('input-project-merchant').value = p.merchant || '';
+        document.getElementById('input-project-consultant').value = p.consultant || 'Paul Kommer';
+        document.getElementById('input-project-products').value = p.products ? p.products.join(', ') : '';
+        document.getElementById('input-project-notes').value = p.notes || '';
+      } else {
+        title.innerText = "Add Specification Project";
+        form.reset();
+        document.getElementById('project-id').value = '';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeProjectModal() {
+      document.getElementById('modal-project').classList.add('hidden');
+    }
+
+    function handleProjectSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('project-id').value;
+      const name = document.getElementById('input-project-name').value;
+      const val = parseFloat(document.getElementById('input-project-val').value) || 0;
+      const stage = document.getElementById('input-project-stage').value;
+      const industry = document.getElementById('input-project-industry').value;
+      const date = document.getElementById('input-project-date').value;
+      const arch = document.getElementById('input-project-arch').value;
+      const merchant = document.getElementById('input-project-merchant').value;
+      const consultant = document.getElementById('input-project-consultant').value;
+      const productsStr = document.getElementById('input-project-products').value;
+      const products = productsStr ? productsStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const notes = document.getElementById('input-project-notes').value;
+
+      if (id) {
+        // Edit
+        const idx = projects.findIndex(p => p.id === id);
+        if (idx !== -1) {
+          projects[idx] = { id, name, value: val, stage, industry, arch, merchant, products, date, consultant, notes };
+        }
+      } else {
+        // Create
+        const newProj = {
+          id: 'PRJ-' + Math.floor(1000 + Math.random() * 9000),
+          name, value: val, stage, industry, arch, merchant, products, date, consultant, notes
+        };
+        projects.push(newProj);
+      }
+
+      saveProjectsToStorage();
+      closeProjectModal();
+      
+      // Refresh current active view
+      renderDashboard();
+      applyFilters();
+    }
+
+    function editProject(id) {
+      openProjectModal(id);
+    }
+
+    function deleteProject(id) {
+      if (confirm("Are you sure you want to delete this project specification?")) {
+        projects = projects.filter(p => p.id !== id);
+        saveProjectsToStorage();
+        renderDashboard();
+        applyFilters();
+      }
+    }
+
+    // --- 11. CONTACT FORM MODAL HANDLERS ---
+    function openContactModal(editId = null) {
+      const modal = document.getElementById('modal-contact');
+      const title = document.getElementById('modal-contact-title');
+      const form = document.getElementById('form-contact');
+
+      if (editId) {
+        const c = contacts.find(item => item.id === editId);
+        if (!c) return;
+        title.innerText = "Edit CRM Contact";
+        document.getElementById('contact-id').value = c.id;
+        document.getElementById('input-contact-name').value = c.name;
+        document.getElementById('input-contact-firm').value = c.firm;
+        document.getElementById('input-contact-role').value = c.role;
+        document.getElementById('input-contact-email').value = c.email || '';
+        document.getElementById('input-contact-phone').value = c.phone || '';
+      } else {
+        title.innerText = "Add CRM Contact";
+        form.reset();
+        document.getElementById('contact-id').value = '';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeContactModal() {
+      document.getElementById('modal-contact').classList.add('hidden');
+    }
+
+    function handleContactSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('contact-id').value;
+      const name = document.getElementById('input-contact-name').value;
+      const firm = document.getElementById('input-contact-firm').value;
+      const role = document.getElementById('input-contact-role').value;
+      const email = document.getElementById('input-contact-email').value;
+      const phone = document.getElementById('input-contact-phone').value;
+
+      if (id) {
+        const idx = contacts.findIndex(c => c.id === id);
+        if (idx !== -1) contacts[idx] = { id, name, firm, role, email, phone };
+      } else {
+        contacts.push({ id: 'CON-' + Math.floor(1000 + Math.random() * 9000), name, firm, role, email, phone });
+      }
+
+      saveContactsToStorage();
+      closeContactModal();
+      renderContacts();
+    }
+
+    function editContact(id) { openContactModal(id); }
+    function deleteContact(id) {
+      if (confirm("Delete this contact record?")) {
+        contacts = contacts.filter(c => c.id !== id);
+        saveContactsToStorage();
+        renderContacts();
+      }
+    }
+
+    // --- 12. PIN SECURITY & PROTECTED ACTIONS ---
+    function requestPinProtectedAction(actionKey) {
+      pendingPinAction = actionKey;
+      document.getElementById('input-pin').value = '';
+      document.getElementById('modal-pin').classList.remove('hidden');
+    }
+
+    function closePinModal() {
+      pendingPinAction = null;
+      document.getElementById('modal-pin').classList.add('hidden');
+    }
+
+    function verifyPinAndExecute() {
+      const pin = document.getElementById('input-pin').value;
+      if (pin === SECURITY_PIN) {
+        const action = pendingPinAction;
+        closePinModal();
+
+        if (action === 'resetData') executeResetData();
+        if (action === 'exportProjects') executeExportProjects();
+        if (action === 'exportContacts') executeExportContacts();
+      } else {
+        alert("Incorrect Security PIN.");
+      }
+    }
+
+    function executeResetData() {
+      if (confirm("Reset local storage to original sample datasets? All unsaved local updates will be erased.")) {
+        localStorage.removeItem('streamline_projects');
+        localStorage.removeItem('streamline_contacts');
+        loadProjectsFromStorage();
+        loadContactsFromStorage();
+        renderDashboard();
+        applyFilters();
+        renderContacts();
+        alert("Data reset successfully.");
+      }
+    }
+
+    function executeExportProjects() {
+      let csv = "ID,Project Name,Sales Potential (R),Stage,Industry,Arch / Cons,Merchant / Contractor,Specified Products,Est Supply Date,Consultant,Notes\n";
+      projects.forEach(p => {
+        csv += `"${p.id}","${p.name}",${p.value},"${p.stage}","${p.industry}","${p.arch || ''}","${p.merchant || ''}","${(p.products||[]).join(';')}","${p.date||''}","${p.consultant||''}","${p.notes||''}"\n`;
+      });
+      downloadCSV(csv, `Streamline_Projects_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    }
+
+    function executeExportContacts() {
+      let csv = "ID,Full Name,Firm,Role,Email,Phone\n";
+      contacts.forEach(c => {
+        csv += `"${c.id}","${c.name}","${c.firm}","${c.role}","${c.email||''}","${c.phone||''}"\n`;
+      });
+      downloadCSV(csv, `Streamline_Contacts_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    }
+
+    function downloadCSV(csvContent, fileName) {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+    }
+
+    // --- 13. EXECUTIVE PDF MANAGEMENT REPORT GENERATOR ---
+    function generateExecutivePDFReport() {
+      const container = document.getElementById('pdf-report-container');
+      const today = new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      // Calculate Metrics
+      const activeProjects = projects.filter(p => p.stage !== 'Lost');
+      const totalActiveVal = activeProjects.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+      const suppliedVal = projects.filter(p => p.stage === 'Supplied').reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+
+      container.innerHTML = `
+        <div id="pdf-content" class="p-8 bg-white text-slate-900 space-y-6 font-sans">
+          <!-- Header -->
+          <div class="border-b-2 border-indigo-600 pb-4 flex items-center justify-between">
+            <div>
+              <h1 class="text-2xl font-bold text-slate-900">Executive Pipeline Report</h1>
+              <p class="text-xs text-slate-500">Streamline Project Specification Management</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs font-bold text-slate-700">Date: ${today}</p>
+              <p class="text-xs text-slate-500">Currency: ZAR (R)</p>
+            </div>
+          </div>
+
+          <!-- KPI Summary Box -->
+          <div class="grid grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div>
+              <p class="text-[10px] uppercase font-bold text-slate-500">Total Active Pipeline</p>
+              <p class="text-lg font-bold text-indigo-950">${formatCurrency(totalActiveVal)}</p>
+              <p class="text-xs text-slate-500">${activeProjects.length} active opportunities</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase font-bold text-slate-500">Supplied Revenue</p>
+              <p class="text-lg font-bold text-emerald-600">${formatCurrency(suppliedVal)}</p>
+              <p class="text-xs text-slate-500">Fulfilling specifications</p>
+            </div>
+            <div>
+              <p class="text-[10px] uppercase font-bold text-slate-500">Total Projects Recorded</p>
+              <p class="text-lg font-bold text-slate-900">${projects.length}</p>
+              <p class="text-xs text-slate-500">Across all pipeline stages</p>
+            </div>
+          </div>
+
+          <!-- Consultant Matrix -->
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b pb-1">Consultant Performance Summary</h3>
+            <table class="w-full text-left text-xs border border-slate-200">
+              <thead class="bg-slate-100 text-slate-700 font-bold">
+                <tr>
+                  <th class="p-2">Team Representative</th>
+                  <th class="p-2">Active Specs</th>
+                  <th class="p-2 text-right">Active Potential (R)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                ${["Paul Kommer", "Sarah Jenkins", "Mark Taylor", "David Vance", "Elena Rostova"].map(cName => {
+                  const cList = projects.filter(p => p.consultant === cName && p.stage !== 'Lost');
+                  const cVal = cList.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+                  return `
+                    <tr>
+                      <td class="p-2 font-medium">${cName}</td>
+                      <td class="p-2">${cList.length}</td>
+                      <td class="p-2 text-right font-bold">${formatCurrency(cVal)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Top High Value Specifications -->
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2 border-b pb-1">Top Active Opportunities</h3>
+            <table class="w-full text-left text-xs border border-slate-200">
+              <thead class="bg-slate-100 text-slate-700 font-bold">
+                <tr>
+                  <th class="p-2">Project Name</th>
+                  <th class="p-2">Stage</th>
+                  <th class="p-2">Arch / Cons</th>
+                  <th class="p-2">Est Supply Date</th>
+                  <th class="p-2 text-right">Value (R)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                ${[...projects].sort((a,b) => b.value - a.value).slice(0, 5).map(p => `
+                  <tr>
+                    <td class="p-2 font-bold text-slate-900">${p.name}</td>
+                    <td class="p-2">${p.stage}</td>
+                    <td class="p-2">${p.arch || '-'}</td>
+                    <td class="p-2">${p.date}</td>
+                    <td class="p-2 text-right font-bold">${formatCurrency(p.value)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200 text-center text-[10px] text-slate-400">
+            Confidential Executive Document — Generated by Streamline Pipeline Manager
+          </div>
+        </div>
+      `;
+
+      const element = document.getElementById('pdf-content');
+      const opt = {
+        margin:       0.5,
+        filename:     `Streamline_Executive_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // --- 14. INITIALIZATION ON PAGE LOAD ---
+    window.addEventListener('DOMContentLoaded', () => {
+      loadProjectsFromStorage();
+      loadContactsFromStorage();
+      renderDashboard();
+    });
+  </script>
+</body>
+</html>
